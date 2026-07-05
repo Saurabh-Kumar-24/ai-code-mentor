@@ -14,23 +14,17 @@ const client = new Groq({
   apiKey: process.env.GROQ_API_KEY,
 });
 
-// 🔹 Analyze Code API
 app.post("/analyze", async (req, res) => {
   try {
     const { code } = req.body;
-
     if (!code || code.trim() === "") {
       return res.status(400).json({ error: "Code is required" });
     }
-
     const response = await client.chat.completions.create({
       model: "llama-3.3-70b-versatile",
       max_tokens: 1024,
       messages: [
-        {
-          role: "system",
-          content: "You are a strict DSA expert.",
-        },
+        { role: "system", content: "You are a strict DSA expert." },
         {
           role: "user",
           content: `
@@ -57,7 +51,6 @@ Space Complexity:
 
 Hint to Optimize:
 - Give direction only (no full code)
-- Example: "Use hashmap to reduce lookup time"
 
 Code:
 ${code}
@@ -66,39 +59,31 @@ ${code}
       ],
       temperature: 0.2,
     });
-
     const result = response.choices[0].message.content;
     res.json({ analysis: result });
-
   } catch (error) {
     console.error("Groq error:", error.message);
     res.status(500).json({ analysis: "❌ Groq API failed: " + error.message });
   }
 });
 
-// 🔹 Approach API
 app.post("/approach", async (req, res) => {
   try {
     const { question } = req.body;
-
     if (!question || question.trim() === "") {
       return res.status(400).json({ error: "Question is required" });
     }
-
     const response = await client.chat.completions.create({
       model: "llama-3.3-70b-versatile",
       max_tokens: 1024,
       messages: [
-        {
-          role: "system",
-          content: "You are a DSA mentor to guide student on their coding journey.",
-        },
+        { role: "system", content: "You are a DSA mentor to guide student on their coding journey." },
         {
           role: "user",
           content: `
 Give:
 1. Intuition
-2. Approach to solve as brute force and then how to optimize that code
+2. Approach to solve as brute force and then how to optimize
 3. Data Structures which can be used
 4. Edge Cases
 
@@ -111,9 +96,7 @@ ${question}
       ],
       temperature: 0.3,
     });
-
     res.json({ analysis: response.choices[0].message.content });
-
   } catch (error) {
     console.error("Groq error:", error.message);
     res.status(500).json({ analysis: "❌ Groq API failed: " + error.message });
