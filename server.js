@@ -1,33 +1,31 @@
-
-
-
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import OpenAI from "openai";
+import Groq from "groq-sdk";
 
 dotenv.config();
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+console.log("GROQ API KEY loaded:", process.env.GROQ_API_KEY ? "YES ✅" : "NO ❌");
 
-// ✅ NVIDIA (OpenAI-compatible)
-const client = new OpenAI({
-  apiKey: process.env.NVIDIA_API_KEY,
-  baseURL: "https://integrate.api.nvidia.com/v1", // ✅ IMPORTANT
+const client = new Groq({
+  apiKey: process.env.GROQ_API_KEY,
 });
 
+// 🔹 Analyze Code API
 app.post("/analyze", async (req, res) => {
   try {
     const { code } = req.body;
 
-    if (!code) {
+    if (!code || code.trim() === "") {
       return res.status(400).json({ error: "Code is required" });
     }
 
     const response = await client.chat.completions.create({
-      model: "meta/llama3-70b-instruct", // ✅ powerful model
+      model: "llama-3.3-70b-versatile",
+      max_tokens: 1024,
       messages: [
         {
           role: "system",
@@ -36,16 +34,13 @@ app.post("/analyze", async (req, res) => {
         {
           role: "user",
           content: `
-          You are a strict DSA mentor.
+You are a strict DSA mentor.
 
 Rules:
 - Only report REAL errors (logic/syntax)
 - Do NOT give full optimized code
 - Give only HINTS for improvement (not full solution)
 - Be concise and compact
-
-
-
 
 Output format:
 
@@ -64,7 +59,6 @@ Hint to Optimize:
 - Give direction only (no full code)
 - Example: "Use hashmap to reduce lookup time"
 
-
 Code:
 ${code}
           `,
@@ -74,15 +68,11 @@ ${code}
     });
 
     const result = response.choices[0].message.content;
-
     res.json({ analysis: result });
 
   } catch (error) {
-    console.error("NVIDIA Error:", error);
-
-    res.status(500).json({
-      analysis: "❌ NVIDIA API failed",
-    });
+    console.error("Groq error:", error.message);
+    res.status(500).json({ analysis: "❌ Groq API failed: " + error.message });
   }
 });
 
@@ -91,8 +81,13 @@ app.post("/approach", async (req, res) => {
   try {
     const { question } = req.body;
 
+    if (!question || question.trim() === "") {
+      return res.status(400).json({ error: "Question is required" });
+    }
+
     const response = await client.chat.completions.create({
-      model: "meta/llama3-70b-instruct",
+      model: "llama-3.3-70b-versatile",
+      max_tokens: 1024,
       messages: [
         {
           role: "system",
@@ -104,9 +99,8 @@ app.post("/approach", async (req, res) => {
 Give:
 1. Intuition
 2. Approach to solve as brute force and then how to optimize that code
-3. Data Structures which can be used 
+3. Data Structures which can be used
 4. Edge Cases
-
 
 DO NOT give code.
 
@@ -118,16 +112,14 @@ ${question}
       temperature: 0.3,
     });
 
-    res.json({
-      analysis: response.choices[0].message.content,
-    });
+    res.json({ analysis: response.choices[0].message.content });
 
   } catch (error) {
-    console.error(error);
-    res.json({ analysis: "❌ Error generating approach" });
+    console.error("Groq error:", error.message);
+    res.status(500).json({ analysis: "❌ Groq API failed: " + error.message });
   }
 });
 
 app.listen(process.env.PORT || 5000, () => {
-  console.log("Server running on http://localhost:5000");
+  console.log(`🚀 Server running on http://localhost:${process.env.PORT || 5000}`);
 });
